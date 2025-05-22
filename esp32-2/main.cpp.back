@@ -1,0 +1,79 @@
+#include <Arduino.h>
+#include <WiFi.h>
+#include <DHT.h>
+
+// ==== 定义引脚 ====
+#define SOIL_PIN 34         // 土壤湿度模拟输入（ADC）
+#define DHT_PIN 10          // 温湿度传感器输入引脚
+#define DHT_TYPE DHT22      // DHT11 或 DHT22
+
+// ==== WiFi 配置 ====
+const char* ssid = "你的WiFi名称";
+const char* password = "你的WiFi密码";
+
+DHT dht(DHT_PIN, DHT_TYPE);
+
+void connectToWiFi() {
+  Serial.print("连接到WiFi中: ");
+  WiFi.begin(ssid, password);
+
+  int retries = 0;
+  while (WiFi.status() != WL_CONNECTED && retries < 20) {
+    delay(500);
+    Serial.print(".");
+    retries++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi 连接成功！");
+    Serial.print("IP 地址: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\nWiFi 连接失败，请检查SSID和密码。");
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  analogReadResolution(12);  // 设置为12位 ADC
+  dht.begin();               // 启动温湿度传感器
+
+  connectToWiFi();
+}
+
+void loop() {
+  // 读取土壤湿度
+  int soilValue = analogRead(SOIL_PIN);
+  float voltage = soilValue * 3.3 / 4095.0;
+
+  // 读取温湿度
+  float temperature = dht.readTemperature();  // 摄氏温度
+  float humidity = dht.readHumidity();
+
+  // 打印所有数据
+  Serial.print("湿度值: ");
+  Serial.print(soilValue);
+  Serial.print(" -> ");
+  Serial.print(voltage, 2);
+  Serial.print("V | ");
+
+  if (soilValue > 3000) {
+    Serial.print("Very Dry 🌵 | ");
+  } else if (soilValue > 2000) {
+    Serial.print("Normal 💧 | ");
+  } else {
+    Serial.print("Very Wet 🌊 | ");
+  }
+
+  if (isnan(temperature) || isnan(humidity)) {
+    Serial.println("温湿度读取失败 😢");
+  } else {
+    Serial.print("温度: ");
+    Serial.print(temperature);
+    Serial.print("°C | 湿度: ");
+    Serial.print(humidity);
+    Serial.println("%");
+  }
+
+  delay(3000);
+}
